@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { MessageService } from 'src/message/message.service';
 import { createRoomDto, sendMessageDto } from './room.model';
 import { RoomService } from './room.service';
 import { Types } from 'mongoose';
-import { createMessageDto } from 'src/message/message.model';
+import { createMessageDto, messageSearchDto } from 'src/message/message.model';
 
 @Controller('room')
 export class RoomController {
@@ -64,9 +64,9 @@ export class RoomController {
 		};
 	}
 
-	@Post('/id/:id/send')
+	@Post('/id/:id/message/send')
 	async addMessage(
-		@Param('id') roomId,
+		@Param('id') roomId: string,
 		@Body('message') message: sendMessageDto,
 	) {
 		const newMessage: createMessageDto = {
@@ -75,6 +75,28 @@ export class RoomController {
 		};
 		return {
 			data: await this.messageService.addOne(newMessage),
+		};
+	}
+	@Get('/id/:id/message/')
+	async getMessages(
+		@Param('id') roomId: string,
+		@Query('from_date') fromDateStr?: string,
+		@Query('to_date') toDateStr?: string,
+	) {
+		const fromDate: Date = new Date(fromDateStr ?? 0);
+		const toDate: Date = toDateStr ? new Date(toDateStr) : new Date();
+		return {
+			data: await this.messageService.findAllByRoom(roomId, fromDate, toDate),
+		};
+	}
+
+	@Get('/id/:id/message/search')
+	async searchMessages(
+		@Param('id') roomId: string,
+		@Query() query: messageSearchDto,
+	) {
+		return {
+			data: await this.messageService.search(roomId, query),
 		};
 	}
 }

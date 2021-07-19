@@ -5,6 +5,7 @@ import {
 	createMessageDto,
 	Message,
 	MessageDocument,
+	messageSearchDto,
 	updateMessageDto,
 } from './message.model';
 
@@ -17,10 +18,10 @@ export class MessageService {
 	async findAllByRoom(
 		roomId: string,
 		fromDate: Date = new Date(0),
-		toDate: Date = new Date(),
+		toDate: Date = new Date(Date()),
 	): Promise<Message[]> {
 		const query: any = {
-			room: roomId,
+			room: Types.ObjectId(roomId),
 			edited_at: { $gt: fromDate, $lte: toDate },
 		};
 		return this.MessageModel.find(query)
@@ -39,6 +40,26 @@ export class MessageService {
 			author: authorId,
 			edited_at: { $gt: fromDate, $lte: toDate },
 		};
+		return this.MessageModel.find(query)
+			.populate('author')
+			.populate({ path: 'forwardOf', populate: { path: 'author' } })
+			.sort({ sent_at: 1 })
+			.lean();
+	}
+
+	async search(roomId: string, search: messageSearchDto) {
+		const query: any = { room: Types.ObjectId(roomId) };
+
+		if (search.text) query.$text = { $search: String(search.text) };
+
+		if (search.author) query.author = search.author;
+
+		if (search.from_date || search.to_date)
+			query.edited_at = {
+				$gte: search.from_date ? new Date(search.from_date) : new Date(0),
+				$lte: search.to_date ? new Date(search.to_date) : Date(),
+			};
+
 		return this.MessageModel.find(query)
 			.populate('author')
 			.populate({ path: 'forwardOf', populate: { path: 'author' } })

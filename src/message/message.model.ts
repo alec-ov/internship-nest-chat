@@ -1,5 +1,5 @@
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
-import { IsNotEmpty, IsOptional, Length } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, Length } from 'class-validator';
 import { IsObjectId } from 'class-validator-mongo-object-id';
 import { Types, Document } from 'mongoose';
 import { Room } from 'src/room/room.model';
@@ -65,6 +65,23 @@ export class createMessageDto {
 export class updateMessageDto {
 	@IsNotEmpty()
 	text: string;
+}
+export class messageSearchDto {
+	@IsOptional()
+	@IsObjectId()
+	author?: Types.ObjectId;
+
+	@IsOptional()
+	@Length(2)
+	text?: string;
+
+	@IsOptional()
+	@IsDateString()
+	from_date?: Date;
+
+	@IsOptional()
+	@IsDateString()
+	to_date?: Date;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

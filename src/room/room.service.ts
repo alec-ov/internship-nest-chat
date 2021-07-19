@@ -41,7 +41,6 @@ export class RoomService {
 	async addOne(newRoom: createRoomDto) {
 		const room = new this.RoomModel(newRoom);
 		room._id = Types.ObjectId();
-		Logger.log(room);
 		return room.save();
 	}
 
