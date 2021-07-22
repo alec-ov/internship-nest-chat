@@ -1,10 +1,37 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+	Body,
+	Controller,
+	Get,
+	Param,
+	Patch,
+	Post,
+	Query,
+} from '@nestjs/common';
 import { MessageService } from 'src/message/message.service';
-import { createRoomDto, sendMessageDto } from './room.model';
+import {
+	CreateRoomDto,
+	PopulatedRoom,
+	SendMessageDto,
+	UnpopulatedRoom,
+} from './room.dto';
 import { RoomService } from './room.service';
 import { Types } from 'mongoose';
-import { createMessageDto, messageSearchDto } from 'src/message/message.model';
+import {
+	ApiCreatedResponse,
+	ApiOperation,
+	ApiParam,
+	ApiResponse,
+	ApiTags,
+} from '@nestjs/swagger';
+import {
+	CreateMessageDto,
+	PopulatedMessage,
+	SearchMessageDto,
+	UnpopulatedMessage,
+	UpdateMessageDto,
+} from 'src/message/message.dto';
 
+@ApiTags('Room')
 @Controller('room')
 export class RoomController {
 	constructor(
@@ -13,71 +40,110 @@ export class RoomController {
 	) {}
 
 	@Get('/')
+	@ApiOperation({ description: 'Get all existing rooms' })
+	@ApiResponse({ type: [UnpopulatedRoom], description: 'List of all rooms' })
 	async findAll() {
-		return { data: await this.roomService.findAll() };
+		return await this.roomService.findAll();
 	}
 
 	@Post('/')
-	async addOne(@Body() newRoom: createRoomDto) {
-		return { data: await this.roomService.addOne(newRoom) };
+	async addOne(@Body() newRoom: CreateRoomDto) {
+		return await this.roomService.addOne(newRoom);
 	}
 
 	@Get('/id/:id')
+	@ApiOperation({ description: 'Get one room with specified id' })
+	@ApiResponse({ type: PopulatedRoom })
 	async findById(@Param('id') roomId: string) {
-		return {
-			data: await this.roomService.findById(roomId),
-		};
+		return await this.roomService.findById(roomId);
 	}
 
 	@Get('/name/:name')
+	@ApiOperation({ description: 'Get one room with specified name' })
+	@ApiResponse({ type: PopulatedRoom })
 	async findByName(@Param('name') name: string) {
-		return {
-			data: await this.roomService.findByName(name),
-		};
+		return await this.roomService.findByName(name);
 	}
 
 	@Get('/user/:user')
+	@ApiOperation({ description: 'Get all rooms for a specific User' })
+	@ApiResponse({
+		type: [PopulatedRoom],
+		description: 'A list of all rooms where Room.users includes User',
+	})
 	async findByUser(@Param('user') userId: string) {
-		return {
-			data: await this.roomService.findAllByMember(userId),
-		};
+		return await this.roomService.findAllByMember(userId);
 	}
 
 	@Get('/owned/:user')
+	@ApiOperation({ description: 'Get all rooms owned by a specific User' })
+	@ApiResponse({
+		type: [PopulatedRoom],
+		description: 'A list of all rooms where Room.owner === User',
+	})
 	async findByOwner(@Param('user') userId: string) {
-		return {
-			data: await this.roomService.findAllByOwner(userId),
-		};
+		return await this.roomService.findAllByOwner(userId);
 	}
 
 	@Post('/id/:id/join')
+	@ApiOperation({ description: 'Adds a User to this room' })
+	@ApiResponse({
+		type: [UnpopulatedRoom],
+		description: 'The new Room document(unpopulated)',
+	})
 	async addUser(@Param('id') roomId, @Body('id') userId) {
-		return {
-			data: await this.roomService.addUser(roomId, userId),
-		};
+		return await this.roomService.addUser(roomId, userId);
 	}
 
 	@Post('/id/:id/leave')
+	@ApiOperation({ description: 'Removes a User from this room' })
+	@ApiResponse({
+		type: [UnpopulatedRoom],
+		description: 'The new Room document(unpopulated)',
+	})
 	async removeUser(@Param('id') roomId: string, @Body('id') userId: string) {
-		return {
-			data: await this.roomService.removeUser(roomId, userId),
-		};
+		return await this.roomService.removeUser(roomId, userId);
 	}
 
 	@Post('/id/:id/message/send')
+	@ApiOperation({ description: 'Adds a message to this room' })
+	@ApiCreatedResponse({ type: UnpopulatedMessage })
 	async addMessage(
 		@Param('id') roomId: string,
-		@Body('message') message: sendMessageDto,
+		@Body() message: SendMessageDto,
 	) {
-		const newMessage: createMessageDto = {
+		const newMessage: CreateMessageDto = {
 			...message,
 			room: new Types.ObjectId(roomId),
 		};
-		return {
-			data: await this.messageService.addOne(newMessage),
-		};
+		return await this.messageService.addOne(newMessage);
 	}
+
+	@ApiOperation({ description: 'Edit text of the message' })
+	@ApiResponse({ type: UnpopulatedMessage })
+	@Patch('/id/:id/message/edit')
+	async editMessage(
+		@Param('id') roomId: string,
+		@Body() message: UpdateMessageDto,
+	) {
+		return await this.messageService.updateOne(message);
+	}
+
 	@Get('/id/:id/message/')
+	@ApiOperation({ description: 'Get all messages of this room' })
+	@ApiResponse({ type: [PopulatedMessage] })
+	@ApiParam({
+		name: 'from_date',
+		required: false,
+		description:
+			'Date string, define to select only messages created after this date',
+	})
+	@ApiParam({
+		name: 'to_date',
+		required: false,
+		description:
+			'Date string, define to select only messages created before this date',
+	})
 	async getMessages(
 		@Param('id') roomId: string,
 		@Query('from_date') fromDateStr?: string,
@@ -85,18 +151,16 @@ export class RoomController {
 	) {
 		const fromDate: Date = new Date(fromDateStr ?? 0);
 		const toDate: Date = toDateStr ? new Date(toDateStr) : new Date();
-		return {
-			data: await this.messageService.findAllByRoom(roomId, fromDate, toDate),
-		};
+		return await this.messageService.findAllByRoom(roomId, fromDate, toDate);
 	}
 
+	@ApiOperation({ description: 'Search messages in this room' })
+	@ApiResponse({ type: [PopulatedMessage] })
 	@Get('/id/:id/message/search')
 	async searchMessages(
 		@Param('id') roomId: string,
-		@Query() query: messageSearchDto,
+		@Query() query: SearchMessageDto,
 	) {
-		return {
-			data: await this.messageService.search(roomId, query),
-		};
+		return await this.messageService.search(roomId, query);
 	}
 }

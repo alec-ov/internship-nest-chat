@@ -2,12 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
-	createMessageDto,
-	Message,
-	MessageDocument,
-	messageSearchDto,
-	updateMessageDto,
-} from './message.model';
+	CreateMessageDto,
+	SearchMessageDto,
+	UpdateMessageDto,
+} from './message.dto';
+import { Message, MessageDocument } from './message.shema';
 
 @Injectable()
 export class MessageService {
@@ -47,7 +46,7 @@ export class MessageService {
 			.lean();
 	}
 
-	async search(roomId: string, search: messageSearchDto) {
+	async search(roomId: string, search: SearchMessageDto) {
 		const query: any = { room: Types.ObjectId(roomId) };
 
 		if (search.text) query.$text = { $search: String(search.text) };
@@ -76,13 +75,13 @@ export class MessageService {
 			.exec();
 	}
 
-	async updateOne(id: string, newMessage: updateMessageDto) {
-		const message = await this.MessageModel.findById(id);
+	async updateOne(newMessage: UpdateMessageDto) {
+		const message = await this.MessageModel.findById(newMessage._id);
 		message.text = newMessage.text;
 		return message.save();
 	}
 
-	async addOne(newMessage: createMessageDto) {
+	async addOne(newMessage: CreateMessageDto) {
 		const message = new this.MessageModel(newMessage);
 		message._id = Types.ObjectId();
 		return message.save();

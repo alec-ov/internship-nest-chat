@@ -1,26 +1,31 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { createRoomDto, Room, RoomDocument, updateRoomDto } from './room.model';
+import { CreateRoomDto, UpdateRoomDto } from './room.dto';
+import { Room, RoomDocument } from './room.schema';
 
 @Injectable()
 export class RoomService {
 	constructor(@InjectModel(Room.name) private RoomModel: Model<RoomDocument>) {}
 
 	async findAll(): Promise<Room[]> {
-		return this.RoomModel.find()
+		return this.RoomModel.find().lean().exec();
+	}
+	async findAllByMember(userId: string): Promise<Room[]> {
+		const query: any = { users: userId };
+		return this.RoomModel.find(query)
 			.populate('users')
 			.populate('owner')
 			.lean()
 			.exec();
 	}
-	async findAllByMember(userId: string): Promise<Room[]> {
-		const query: any = { users: userId };
-		return this.RoomModel.find(query).lean().exec();
-	}
 	async findAllByOwner(userId: string): Promise<Room[]> {
 		const query: any = { owner: userId };
-		return this.RoomModel.find(query).lean().exec();
+		return this.RoomModel.find(query)
+			.populate('users')
+			.populate('owner')
+			.lean()
+			.exec();
 	}
 
 	async findById(id: string): Promise<Room> {
@@ -38,13 +43,13 @@ export class RoomService {
 			.exec();
 	}
 
-	async addOne(newRoom: createRoomDto) {
+	async addOne(newRoom: CreateRoomDto) {
 		const room = new this.RoomModel(newRoom);
 		room._id = Types.ObjectId();
 		return room.save();
 	}
 
-	async updateOne(id: string, newRoom: updateRoomDto) {
+	async updateOne(id: string, newRoom: UpdateRoomDto) {
 		const room = await this.RoomModel.findById(id);
 		room.set(newRoom);
 		return room.save();

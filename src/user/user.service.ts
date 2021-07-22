@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { createUserDto, updateUserDto, User, UserDocument } from './user.model';
+import { createUserDto, updateUserDto } from './user.dto';
+import { User, UserDocument } from './user.schema';
 
 @Injectable()
 export class UserService {
@@ -18,15 +19,20 @@ export class UserService {
 	}
 
 	async findOneById(id: string): Promise<User> {
-		return this.UserModel.findById(id).lean().exec();
+		return this.UserModel.findById(id).select('+password +email').lean().exec();
 	}
 
 	async findOneByEmail(email: string): Promise<User> {
-		return this.UserModel.findOne({ email }).lean().exec();
+		return this.UserModel.findOne({ email })
+			.select('+password +email')
+			.lean()
+			.exec();
 	}
 
 	async updateOneById(id: string, newUser: updateUserDto): Promise<User> {
-		const user: UserDocument = await this.UserModel.findById(id).exec();
+		const user: UserDocument = await this.UserModel.findById(id)
+			.select('+email')
+			.exec();
 		if (newUser.name) user.name = newUser.name;
 		if (newUser.email) user.email = newUser.email;
 		if (newUser.role) user.role = newUser.role;
