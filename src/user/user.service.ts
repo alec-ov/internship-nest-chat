@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { createUserDto, updateUserDto } from './user.dto';
-import { User, UserDocument } from './user.schema';
+import * as bcrypt from 'bcrypt';
+
+import { User, UserDocument } from './schema/user.schema';
+import { updateUserDto } from './dto/user.update.dto';
+import { registerUserDto } from 'src/auth/dto/register.dto';
 
 @Injectable()
 export class UserService {
@@ -12,24 +15,28 @@ export class UserService {
 		return this.UserModel.find().lean().exec();
 	}
 
-	async addOne(user: createUserDto): Promise<User> {
+	async addOne(user: registerUserDto): Promise<User> {
 		const newUser = new this.UserModel(user);
 		newUser._id = Types.ObjectId();
+		newUser.password = await bcrypt.hash(user.password, 13);
 		return newUser.save();
 	}
 
-	async findOneById(id: string): Promise<User> {
+	async findOneById(id: Types.ObjectId): Promise<User> {
 		return this.UserModel.findById(id).select('+password +email').lean().exec();
 	}
 
 	async findOneByEmail(email: string): Promise<User> {
 		return this.UserModel.findOne({ email })
-			.select('+password +email')
+			.select('+password +email') // include "private" data
 			.lean()
 			.exec();
 	}
 
-	async updateOneById(id: string, newUser: updateUserDto): Promise<User> {
+	async updateOneById(
+		id: Types.ObjectId,
+		newUser: updateUserDto,
+	): Promise<User> {
 		const user: UserDocument = await this.UserModel.findById(id)
 			.select('+email')
 			.exec();
@@ -40,7 +47,7 @@ export class UserService {
 		return user.save();
 	}
 
-	async deleteOneById(id: string): Promise<User> {
+	async deleteOneById(id: Types.ObjectId): Promise<User> {
 		return this.UserModel.findByIdAndRemove(id).exec();
 	}
 }

@@ -1,12 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import {
-	CreateMessageDto,
-	SearchMessageDto,
-	UpdateMessageDto,
-} from './message.dto';
-import { Message, MessageDocument } from './message.shema';
+
+import { CreateMessageDto } from './dto/message.create.dto';
+import { SearchMessageDto } from './dto/message.search.dto';
+import { UpdateMessageDto } from './dto/message.update.dto';
+import { Message, MessageDocument } from './schema/message.schema';
 
 @Injectable()
 export class MessageService {
@@ -24,8 +23,14 @@ export class MessageService {
 			edited_at: { $gt: fromDate, $lte: toDate },
 		};
 		return this.MessageModel.find(query)
-			.populate('author')
-			.populate({ path: 'forwardOf', populate: { path: 'author' } })
+			.populate({
+				path: 'author',
+				select: '-password -email',
+			})
+			.populate({
+				path: 'forwardOf',
+				populate: { path: 'author', select: '-password -email' },
+			})
 			.sort({ sent_at: 1 })
 			.lean();
 	}
@@ -40,8 +45,14 @@ export class MessageService {
 			edited_at: { $gt: fromDate, $lte: toDate },
 		};
 		return this.MessageModel.find(query)
-			.populate('author')
-			.populate({ path: 'forwardOf', populate: { path: 'author' } })
+			.populate({
+				path: 'author',
+				select: '-password -email',
+			})
+			.populate({
+				path: 'forwardOf',
+				populate: { path: 'author', select: '-password -email' },
+			})
 			.sort({ sent_at: 1 })
 			.lean();
 	}
@@ -76,14 +87,18 @@ export class MessageService {
 	}
 
 	async updateOne(newMessage: UpdateMessageDto) {
-		const message = await this.MessageModel.findById(newMessage._id);
+		const message = await this.MessageModel.findById(newMessage.id);
+		if (!message) throw new NotFoundException();
 		message.text = newMessage.text;
 		return message.save();
 	}
 
 	async addOne(newMessage: CreateMessageDto) {
+		if (typeof newMessage.forwardOf == 'string')
+			newMessage.forwardOf = Types.ObjectId(newMessage.forwardOf);
 		const message = new this.MessageModel(newMessage);
 		message._id = Types.ObjectId();
+
 		return message.save();
 	}
 }

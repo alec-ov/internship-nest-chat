@@ -6,15 +6,9 @@ import {
 	Patch,
 	Post,
 	Query,
+	UseGuards,
 } from '@nestjs/common';
-import { MessageService } from 'src/message/message.service';
-import {
-	CreateRoomDto,
-	PopulatedRoom,
-	SendMessageDto,
-	UnpopulatedRoom,
-} from './room.dto';
-import { RoomService } from './room.service';
+
 import { Types } from 'mongoose';
 import {
 	ApiCreatedResponse,
@@ -23,16 +17,27 @@ import {
 	ApiResponse,
 	ApiTags,
 } from '@nestjs/swagger';
-import {
-	CreateMessageDto,
-	PopulatedMessage,
-	SearchMessageDto,
-	UnpopulatedMessage,
-	UpdateMessageDto,
-} from 'src/message/message.dto';
+
+import { MessageService } from 'src/message/message.service';
+
+import { RoomService } from './room.service';
+
+import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { CreateMessagePipe } from 'src/message/pipes/message.create.pipe';
+import { CreateRoomDto } from './dto/room.create.dto';
+import { SendMessageDto } from './dto/room.send.dto';
+
+import { UnpopulatedRoom } from './schema/room.unpopulated';
+import { PopulatedRoom } from './schema/room.populated';
+import { CreateMessageDto } from 'src/message/dto/message.create.dto';
+import { SearchMessageDto } from 'src/message/dto/message.search.dto';
+import { UpdateMessageDto } from 'src/message/dto/message.update.dto';
+import { PopulatedMessage } from 'src/message/schema/message.populated';
+import { UnpopulatedMessage } from 'src/message/schema/message.unpopulated';
+import { UpdateMessagePipe } from 'src/message/pipes/message.update.pipe';
 
 @ApiTags('Room')
-@Controller('room')
+@Controller('rooms')
 export class RoomController {
 	constructor(
 		private roomService: RoomService,
@@ -46,7 +51,10 @@ export class RoomController {
 		return await this.roomService.findAll();
 	}
 
+	@UseGuards(JwtAuthGuard)
 	@Post('/')
+	@ApiOperation({ description: 'Creates a new room' })
+	@ApiResponse({ type: PopulatedRoom })
 	async addOne(@Body() newRoom: CreateRoomDto) {
 		return await this.roomService.addOne(newRoom);
 	}
@@ -54,7 +62,7 @@ export class RoomController {
 	@Get('/id/:id')
 	@ApiOperation({ description: 'Get one room with specified id' })
 	@ApiResponse({ type: PopulatedRoom })
-	async findById(@Param('id') roomId: string) {
+	async findById(@Param('id') roomId: Types.ObjectId) {
 		return await this.roomService.findById(roomId);
 	}
 
@@ -71,17 +79,18 @@ export class RoomController {
 		type: [PopulatedRoom],
 		description: 'A list of all rooms where Room.users includes User',
 	})
-	async findByUser(@Param('user') userId: string) {
+	async findByUser(@Param('user') userId: Types.ObjectId) {
 		return await this.roomService.findAllByMember(userId);
 	}
 
 	@Get('/owned/:user')
+	@UseGuards(JwtAuthGuard)
 	@ApiOperation({ description: 'Get all rooms owned by a specific User' })
 	@ApiResponse({
 		type: [PopulatedRoom],
 		description: 'A list of all rooms where Room.owner === User',
 	})
-	async findByOwner(@Param('user') userId: string) {
+	async findByOwner(@Param('user') userId: Types.ObjectId) {
 		return await this.roomService.findAllByOwner(userId);
 	}
 
@@ -101,16 +110,20 @@ export class RoomController {
 		type: [UnpopulatedRoom],
 		description: 'The new Room document(unpopulated)',
 	})
-	async removeUser(@Param('id') roomId: string, @Body('id') userId: string) {
+	async removeUser(
+		@Param('id') roomId: Types.ObjectId,
+		@Body('id') userId: Types.ObjectId,
+	) {
 		return await this.roomService.removeUser(roomId, userId);
 	}
 
-	@Post('/id/:id/message/send')
+	@UseGuards(JwtAuthGuard)
+	@Post('/id/:id/messages/')
 	@ApiOperation({ description: 'Adds a message to this room' })
 	@ApiCreatedResponse({ type: UnpopulatedMessage })
 	async addMessage(
 		@Param('id') roomId: string,
-		@Body() message: SendMessageDto,
+		@Body(CreateMessagePipe) message: SendMessageDto,
 	) {
 		const newMessage: CreateMessageDto = {
 			...message,
@@ -119,17 +132,19 @@ export class RoomController {
 		return await this.messageService.addOne(newMessage);
 	}
 
+	@UseGuards(JwtAuthGuard)
 	@ApiOperation({ description: 'Edit text of the message' })
 	@ApiResponse({ type: UnpopulatedMessage })
-	@Patch('/id/:id/message/edit')
+	@Patch('/id/:id/messages/')
 	async editMessage(
 		@Param('id') roomId: string,
-		@Body() message: UpdateMessageDto,
+		@Body(UpdateMessagePipe) message: UpdateMessageDto,
 	) {
 		return await this.messageService.updateOne(message);
 	}
 
-	@Get('/id/:id/message/')
+	@UseGuards(JwtAuthGuard)
+	@Get('/id/:id/messages/')
 	@ApiOperation({ description: 'Get all messages of this room' })
 	@ApiResponse({ type: [PopulatedMessage] })
 	@ApiParam({
@@ -156,7 +171,7 @@ export class RoomController {
 
 	@ApiOperation({ description: 'Search messages in this room' })
 	@ApiResponse({ type: [PopulatedMessage] })
-	@Get('/id/:id/message/search')
+	@Get('/id/:id/messages/search')
 	async searchMessages(
 		@Param('id') roomId: string,
 		@Query() query: SearchMessageDto,

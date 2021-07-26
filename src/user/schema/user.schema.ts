@@ -1,13 +1,7 @@
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Types, Document, Schema as mongoSchema } from 'mongoose';
-
-export enum Role {
-	User = 'user',
-	Admin = 'admin',
-}
-
-export const RoleArray = ['user', 'admin'];
+import { Role } from '../enums/user.role.enum';
 
 export type UserDocument = Document & User;
 

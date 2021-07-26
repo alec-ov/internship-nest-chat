@@ -1,7 +1,7 @@
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { Types, Document } from 'mongoose';
-import { Room } from 'src/room/room.schema';
-import { User } from '../user/user.schema';
+import { Room } from 'src/room/schema/room.schema';
+import { User } from '../../user/schema/user.schema';
 
 export type MessageDocument = Document & Message;
 
@@ -40,7 +40,7 @@ export class Message {
 		ref: 'Message',
 		default: null,
 	})
-	ForwardOf?: Message;
+	forwardOf?: Message;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

@@ -1,30 +1,15 @@
-import {
-	Body,
-	Controller,
-	Delete,
-	Get,
-	Param,
-	Patch,
-	Post,
-} from '@nestjs/common';
-import {
-	ApiBody,
-	ApiCreatedResponse,
-	ApiOperation,
-	ApiResponse,
-	ApiTags,
-} from '@nestjs/swagger';
-import {
-	createUserDto,
-	PrivateUser,
-	PublicUser,
-	updateUserDto,
-} from './user.dto';
-import { User } from './user.schema';
+import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Types } from 'mongoose';
+import { PrivateUser } from './dto/user.private.dto';
+import { PublicUser } from './dto/user.public.dto';
+import { updateUserDto } from './dto/user.update.dto';
+
+import { User } from './schema/user.schema';
 import { UserService } from './user.service';
 
 @ApiTags('User')
-@Controller('user')
+@Controller('users')
 export class UserController {
 	constructor(private userService: UserService) {}
 
@@ -44,7 +29,7 @@ export class UserController {
 		type: PrivateUser,
 		description: 'One user with the specified id',
 	})
-	async findById(@Param('id') id: string) {
+	async findById(@Param('id') id: Types.ObjectId) {
 		return await this.userService.findOneById(id);
 	}
 
@@ -63,21 +48,6 @@ export class UserController {
 		return await this.userService.findOneByEmail(email);
 	}
 
-	@Post('/')
-	@ApiOperation({ description: 'Create a new user' })
-	@ApiBody({
-		type: createUserDto,
-		description: 'The user to be created',
-	})
-	@ApiCreatedResponse({
-		status: 201,
-		type: PrivateUser,
-		description: 'The new User document',
-	})
-	async createOne(@Body() user: createUserDto) {
-		return { data: await this.userService.addOne(user) };
-	}
-
 	@Patch('/id/:id')
 	@ApiOperation({ description: 'Update a user' })
 	@ApiBody({
@@ -89,7 +59,10 @@ export class UserController {
 		type: PrivateUser,
 		description: 'The new User document',
 	})
-	async updateOne(@Param('id') id: string, @Body() newUser: updateUserDto) {
+	async updateOne(
+		@Param('id') id: Types.ObjectId,
+		@Body() newUser: updateUserDto,
+	) {
 		return {
 			data: await this.userService.updateOneById(id, newUser),
 		};
@@ -102,7 +75,7 @@ export class UserController {
 		description: 'The deleted User document',
 	})
 	@Delete('/id/:id')
-	async deleteOne(@Param('id') id: string) {
+	async deleteOne(@Param('id') id: Types.ObjectId) {
 		return {
 			data: await this.userService.deleteOneById(id),
 		};
