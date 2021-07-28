@@ -33,7 +33,7 @@ export class AuthService {
 	async login(user: PublicUser) {
 		const payload = { ...user, sub: user._id };
 		return {
-			access_token: this.jwtService.sign(payload, { expiresIn: '10m' }),
+			access_token: this.jwtService.sign(payload, { expiresIn: '20m' }),
 			refresh_token: this.jwtService.sign(payload, { expiresIn: '2d' }),
 		};
 	}

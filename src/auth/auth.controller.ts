@@ -10,6 +10,7 @@ import { PrivateUser } from 'src/user/dto/user.private.dto';
 import { Role } from 'src/user/enums/user.role.enum';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
+import { loginUserDto } from './dto/login.dto';
 import { registerUserDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { LocalAuthGuard } from './guards/local.guard';
@@ -24,6 +25,7 @@ export class AuthController {
 
 	@Post('/login')
 	@UseGuards(LocalAuthGuard)
+	@ApiBody({ type: loginUserDto })
 	async login(@Request() { user }) {
 		return this.authService.login(user);
 	}
