@@ -6,6 +6,8 @@ import { PublicUser } from 'src/user/dto/user.public.dto';
 import { User } from 'src/user/schema/user.schema';
 import { UserService } from 'src/user/user.service';
 
+import { JsonWebTokenError } from 'jsonwebtoken';
+
 @Injectable()
 export class AuthService {
 	constructor(
@@ -31,10 +33,28 @@ export class AuthService {
 
 	// Issues tokens for a User object
 	async login(user: PublicUser) {
-		const payload = { ...user, sub: user._id };
+		const payload = { user, sub: user._id };
 		return {
-			access_token: this.jwtService.sign(payload, { expiresIn: '20m' }),
+			access_token: this.jwtService.sign(payload, { expiresIn: '10m' }),
 			refresh_token: this.jwtService.sign(payload, { expiresIn: '2d' }),
 		};
+	}
+
+	async checkToken(token): Promise<false | PublicUser> {
+		try {
+			const { sub } = this.jwtService.verify(token);
+			if (sub) {
+				const currentUser = await this.userService.findOneById(sub);
+				delete currentUser.email;
+				delete currentUser.password;
+
+				if (currentUser) return currentUser;
+			}
+		} catch (e) {
+			if (e instanceof JsonWebTokenError) {
+				return false;
+			} else throw e;
+		}
+		return false;
 	}
 }

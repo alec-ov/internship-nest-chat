@@ -7,6 +7,7 @@ import { MessageModule } from 'src/message/message.module';
 //import { MessageService } from 'src/message/message.service';
 import { Message, MessageSchema } from 'src/message/schema/message.schema';
 import { AuthModule } from 'src/auth/auth.module';
+import { RoomGateway } from './room.gateway';
 
 @Module({
 	imports: [
@@ -17,7 +18,7 @@ import { AuthModule } from 'src/auth/auth.module';
 		MessageModule,
 		AuthModule,
 	],
-	providers: [RoomService],
+	providers: [RoomService, RoomGateway],
 	controllers: [RoomController],
 })
 export class RoomModule {}

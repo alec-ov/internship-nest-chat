@@ -1,10 +1,18 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import {
+	Body,
+	Controller,
+	Post,
+	Request,
+	UnauthorizedException,
+	UseGuards,
+} from '@nestjs/common';
 import {
 	ApiBody,
 	ApiCreatedResponse,
 	ApiOperation,
 	ApiTags,
 } from '@nestjs/swagger';
+import { Types } from 'mongoose';
 import { PrivateUser } from 'src/user/dto/user.private.dto';
 
 import { Role } from 'src/user/enums/user.role.enum';
@@ -30,6 +38,15 @@ export class AuthController {
 		return this.authService.login(user);
 	}
 
+	@Post('/login-token')
+	async loginByToken(@Body() tokens: { refresh_token: string }) {
+		const user = await this.authService.checkToken(tokens.refresh_token);
+		if (user) {
+			return this.authService.login(user);
+		}
+		throw new UnauthorizedException();
+	}
+
 	@Post('/register')
 	@ApiOperation({ description: 'Create a new user' })
 	@ApiBody({
@@ -43,14 +60,15 @@ export class AuthController {
 	})
 	async register(@Body() newUser: registerUserDto) {
 		newUser.role = Role.User;
-		const user = await this.userService.addOne(newUser);
+		const { _id } = await this.userService.addOne(newUser);
+		const user = await this.userService.findOneById(_id);
 		return this.authService.login(user);
 	}
 
 	@Post('/self')
 	@UseGuards(JwtAuthGuard)
 	@ApiOperation({ description: 'Returns current authenticated user' })
-	async private(@Request() { user }: { user: PrivateUser }) {
-		return await this.userService.findOneById(user._id);
+	async private(@Request() { sub: id }: { sub: Types.ObjectId }) {
+		return await this.userService.findOneById(id);
 	}
 }

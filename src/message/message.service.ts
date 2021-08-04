@@ -78,7 +78,7 @@ export class MessageService {
 	}
 
 	async findById(id: string): Promise<Message> {
-		return this.MessageModel.findById(id)
+		return this.MessageModel.findById(new Types.ObjectId(id))
 			.populate('author')
 			.populate({ path: 'forwardOf', populate: { path: 'author' } })
 			.sort({ sent_at: 1 })
@@ -87,8 +87,11 @@ export class MessageService {
 	}
 
 	async updateOne(newMessage: UpdateMessageDto) {
-		const message = await this.MessageModel.findById(newMessage.id);
-		if (!message) throw new NotFoundException();
+		const message = await this.MessageModel.findById(
+			new Types.ObjectId(newMessage.id),
+		);
+		if (!message)
+			throw new NotFoundException('cannot find message ' + newMessage.id);
 		message.text = newMessage.text;
 		return message.save();
 	}
@@ -96,9 +99,18 @@ export class MessageService {
 	async addOne(newMessage: CreateMessageDto) {
 		if (typeof newMessage.forwardOf == 'string')
 			newMessage.forwardOf = Types.ObjectId(newMessage.forwardOf);
+		if (typeof newMessage.room == 'string')
+			newMessage.room = Types.ObjectId(newMessage.room);
+		if (typeof newMessage.author == 'string')
+			newMessage.author = Types.ObjectId(newMessage.author);
+
 		const message = new this.MessageModel(newMessage);
 		message._id = Types.ObjectId();
 
-		return message.save();
+		const messageDocument = await message.save();
+		return messageDocument
+			.populate('author')
+			.populate({ path: 'forwardOf', populate: { path: 'author' } })
+			.execPopulate();
 	}
 }
